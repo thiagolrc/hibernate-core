@@ -45,6 +45,14 @@ public class EntityInstantiator {
         this.verCfg = verCfg;
         this.versionsReader = versionsReader;
     }
+    
+    public AuditConfiguration getAuditConfiguration() {
+        return verCfg;
+    }
+
+    public AuditReaderImplementor getAuditReaderImplementor() {
+        return versionsReader;
+    }
 
     /**
      * Creates an entity instance based on an entry from the versions table.

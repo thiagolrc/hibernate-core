@@ -97,7 +97,8 @@ public class SinglePropertyMapper implements PropertyMapper, SimpleMapperBuilder
 		}
 	}
 
-    public List<PersistentCollectionChangeData> mapCollectionChanges(String referencingPropertyName,
+    public List<PersistentCollectionChangeData> mapCollectionChanges(SessionImplementor session, 
+                                                                     String referencingPropertyName,
                                                                      PersistentCollection newColl,
                                                                      Serializable oldColl,
                                                                      Serializable id) {

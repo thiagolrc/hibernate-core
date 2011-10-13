@@ -107,7 +107,8 @@ public class ToOneIdMapper implements PropertyMapper {
         setter.set(obj, value, null);
     }
 
-    public List<PersistentCollectionChangeData> mapCollectionChanges(String referencingPropertyName,
+    public List<PersistentCollectionChangeData> mapCollectionChanges(SessionImplementor session, 
+                                                                     String referencingPropertyName,
                                                                      PersistentCollection newColl,
                                                                      Serializable oldColl,
                                                                      Serializable id) {

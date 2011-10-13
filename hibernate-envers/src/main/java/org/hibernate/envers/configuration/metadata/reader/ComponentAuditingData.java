@@ -51,6 +51,10 @@ public class ComponentAuditingData extends PropertyAuditingData implements Audit
         return properties.get(propertyName);
     }
     
+    public Iterable<String> getPropertyNames() {
+        return properties.keySet();
+    }
+    
     public boolean contains(String propertyName) {
     	return properties.containsKey(propertyName);
     }    

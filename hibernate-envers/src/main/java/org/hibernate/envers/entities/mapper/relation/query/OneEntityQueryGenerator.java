@@ -47,6 +47,7 @@ public final class OneEntityQueryGenerator implements RelationQueryGenerator {
                                    AuditStrategy auditStrategy,
                                    String versionsMiddleEntityName,
                                    MiddleIdData referencingIdData,
+                                   boolean revisionTypeInId,
                                    MiddleComponentData... componentDatas) {
         this.referencingIdData = referencingIdData;
 
@@ -86,10 +87,11 @@ public final class OneEntityQueryGenerator implements RelationQueryGenerator {
         // --> based on auditStrategy (see above)
         auditStrategy.addAssociationAtRevisionRestriction(qb, revisionPropertyPath,
          		verEntCfg.getRevisionEndFieldName(), true,referencingIdData, versionsMiddleEntityName, 
-         		eeOriginalIdPropertyPath, revisionPropertyPath, originalIdPropertyName, componentDatas);
+         		eeOriginalIdPropertyPath, revisionPropertyPath, originalIdPropertyName, "ee", componentDatas);
          
         // ee.revision_type != DEL
-        rootParameters.addWhereWithNamedParam(verEntCfg.getRevisionTypePropName(), "!=", "delrevisiontype");
+        final String revisionTypePropertyName = (revisionTypeInId ? verEntCfg.getOriginalIdPropName() + '.' + verEntCfg.getRevisionTypePropName() : verEntCfg.getRevisionTypePropName());
+        rootParameters.addWhereWithNamedParam(revisionTypePropertyName, "!=", "delrevisiontype");
 
         StringBuilder sb = new StringBuilder();
         qb.build(sb, Collections.<String, Object>emptyMap());

@@ -38,13 +38,17 @@ import org.dom4j.Element;
 import org.jboss.logging.Logger;
 
 import org.hibernate.MappingException;
+import org.hibernate.annotations.common.reflection.ReflectionManager;
 import org.hibernate.envers.ModificationStore;
 import org.hibernate.envers.RelationTargetAuditMode;
+import org.hibernate.envers.configuration.metadata.reader.AuditedPropertiesReader;
+import org.hibernate.envers.configuration.metadata.reader.ComponentAuditingData;
 import org.hibernate.envers.configuration.metadata.reader.PropertyAuditingData;
 import org.hibernate.envers.entities.EntityConfiguration;
 import org.hibernate.envers.entities.IdMappingData;
 import org.hibernate.envers.entities.PropertyData;
 import org.hibernate.envers.entities.mapper.CompositeMapperBuilder;
+import org.hibernate.envers.entities.mapper.MultiPropertyMapper;
 import org.hibernate.envers.entities.mapper.PropertyMapper;
 import org.hibernate.envers.entities.mapper.SinglePropertyMapper;
 import org.hibernate.envers.entities.mapper.id.IdMapper;
@@ -58,6 +62,7 @@ import org.hibernate.envers.entities.mapper.relation.SortedMapCollectionMapper;
 import org.hibernate.envers.entities.mapper.relation.SortedSetCollectionMapper;
 import org.hibernate.envers.entities.mapper.relation.ToOneIdMapper;
 import org.hibernate.envers.entities.mapper.relation.component.MiddleDummyComponentMapper;
+import org.hibernate.envers.entities.mapper.relation.component.MiddleEmbeddableComponentMapper;
 import org.hibernate.envers.entities.mapper.relation.component.MiddleMapKeyIdComponentMapper;
 import org.hibernate.envers.entities.mapper.relation.component.MiddleMapKeyPropertyComponentMapper;
 import org.hibernate.envers.entities.mapper.relation.component.MiddleRelatedComponentMapper;
@@ -75,13 +80,16 @@ import org.hibernate.envers.tools.MappingTools;
 import org.hibernate.envers.tools.StringTools;
 import org.hibernate.envers.tools.Tools;
 import org.hibernate.mapping.Collection;
+import org.hibernate.mapping.Component;
 import org.hibernate.mapping.IndexedCollection;
 import org.hibernate.mapping.OneToMany;
 import org.hibernate.mapping.PersistentClass;
 import org.hibernate.mapping.Property;
+import org.hibernate.mapping.SimpleValue;
 import org.hibernate.mapping.Table;
 import org.hibernate.mapping.Value;
 import org.hibernate.type.BagType;
+import org.hibernate.type.ComponentType;
 import org.hibernate.type.ListType;
 import org.hibernate.type.ManyToOneType;
 import org.hibernate.type.MapType;
@@ -348,7 +356,7 @@ public final class CollectionMetadataGenerator {
         // a query generator to read the raw data collection from the middle table.
 		QueryGeneratorBuilder queryGeneratorBuilder = new QueryGeneratorBuilder(mainGenerator.getGlobalCfg(),
                 mainGenerator.getVerEntCfg(), mainGenerator.getAuditStrategy(), referencingIdData,
-				auditMiddleEntityName);
+				auditMiddleEntityName, isEmbeddableElementType());
 
         // Adding the XML mapping for the referencing entity, if the relation isn't inverse.
         if (middleEntityXml != null) {
@@ -461,18 +469,56 @@ public final class CollectionMetadataGenerator {
             return new MiddleComponentData(new MiddleRelatedComponentMapper(referencedIdData),
                     queryGeneratorBuilder.getCurrentIndex());
         } else {
-            // Last but one parameter: collection components are always insertable
-            boolean mapped = mainGenerator.getBasicMetadataGenerator().addBasic(xmlMapping,
-                    new PropertyAuditingData(prefix, "field", ModificationStore.FULL, RelationTargetAuditMode.AUDITED, null, null, false),
-                    value, null, true, true);
+            // Check for embeddable / component element
+            if(type instanceof ComponentType) {
+                final Component component = (Component) value;
+                final MiddleEmbeddableComponentMapper componentMapper = new MiddleEmbeddableComponentMapper(new MultiPropertyMapper(), component.getComponentClassName());
+                
+                // Embeddable properties must be added as non-composite-id properties
+                // since embeddable properties can be nullable and can't be contained within
+                // the primary key
+                final Element parent = xmlMapping.getParent();
+                final ComponentAuditingData auditData = new ComponentAuditingData();
+                final ReflectionManager reflectionManager = mainGenerator.getCfg().getReflectionManager();
 
-            if (mapped) {
-                // Simple values are always stored in the first item of the array returned by the query generator.
-                return new MiddleComponentData(new MiddleSimpleComponentMapper(mainGenerator.getVerEntCfg(), prefix), 0);
+                // Read metadata from annotations
+                new AuditedPropertiesReader(ModificationStore.FULL, new AuditedPropertiesReader.ComponentPropertiesSource(reflectionManager, component), auditData,
+                        mainGenerator.getGlobalCfg(), reflectionManager, "").read();
+
+                for(final String auditedPropertyName : auditData.getPropertyNames()) {
+                    final PropertyAuditingData nestedAuditingData = auditData.getPropertyAuditingData(auditedPropertyName);
+                    mainGenerator.addValue(parent, component.getProperty(auditedPropertyName).getValue(), componentMapper, prefix, xmlMappingData, nestedAuditingData, true, true);
+                }
+                
+                // Add an additional column holding a number to make each entry unique within the set,
+                // since embeddable properties can be null
+                if(propertyValue.getCollectionType() instanceof SetType) {
+                  final String auditedEmbeddableSetOrdinalPropertyName = mainGenerator.getVerEntCfg().getEmbeddableSetOrdinalPropertyName();
+                  final String auditedEmbeddableSetOrdinalPropertyType = mainGenerator.getVerEntCfg().getEmbeddableSetOrdinalPropertyType();
+                  
+                  final SimpleValue simpleValue = new SimpleValue(component.getMappings(), component.getTable());
+                  simpleValue.setTypeName(auditedEmbeddableSetOrdinalPropertyType);
+                  
+                  final Element idProperty = MetadataTools.addProperty(xmlMapping, auditedEmbeddableSetOrdinalPropertyName,
+                                                                       auditedEmbeddableSetOrdinalPropertyType, true, true);
+                  MetadataTools.addColumn(idProperty, auditedEmbeddableSetOrdinalPropertyName, null, 0, 0, null, null, null, false);
+                }
+                
+                return new MiddleComponentData(componentMapper, 0);
             } else {
-                mainGenerator.throwUnsupportedTypeException(type, referencingEntityName, propertyName);
-                // Impossible to get here.
-                throw new AssertionError();
+                // Last but one parameter: collection components are always insertable
+                boolean mapped = mainGenerator.getBasicMetadataGenerator().addBasic(xmlMapping,
+                        new PropertyAuditingData(prefix, "field", ModificationStore.FULL, RelationTargetAuditMode.AUDITED, null, null, false),
+                        value, null, true, true);
+    
+                if (mapped) {
+                    // Simple values are always stored in the first item of the array returned by the query generator.
+                    return new MiddleComponentData(new MiddleSimpleComponentMapper(mainGenerator.getVerEntCfg(), prefix), 0);
+                } else {
+                    mainGenerator.throwUnsupportedTypeException(type, referencingEntityName, propertyName);
+                    // Impossible to get here.
+                    throw new AssertionError();
+                }
             }
         }
     }
@@ -480,33 +526,35 @@ public final class CollectionMetadataGenerator {
     private void addMapper(CommonCollectionMapperData commonCollectionMapperData, MiddleComponentData elementComponentData,
                            MiddleComponentData indexComponentData) {
         Type type = propertyValue.getType();
+        final boolean embeddableElementType = isEmbeddableElementType();
+        
         if (type instanceof SortedSetType) {
 			currentMapper.addComposite(propertyAuditingData.getPropertyData(),
-					new SortedSetCollectionMapper(commonCollectionMapperData,
-							TreeSet.class, SortedSetProxy.class, elementComponentData, propertyValue.getComparator()));
+			        new SortedSetCollectionMapper(commonCollectionMapperData,
+                    TreeSet.class, SortedSetProxy.class, elementComponentData, embeddableElementType, embeddableElementType, propertyValue.getComparator()));
 		} else if (type instanceof SetType) {
-			currentMapper.addComposite(propertyAuditingData.getPropertyData(),
+            currentMapper.addComposite(propertyAuditingData.getPropertyData(),
                     new BasicCollectionMapper<Set>(commonCollectionMapperData,
-                    HashSet.class, SetProxy.class, elementComponentData));
+                            HashSet.class, SetProxy.class, elementComponentData, embeddableElementType, embeddableElementType));
         } else if (type instanceof SortedMapType) {
             // Indexed collection, so <code>indexComponentData</code> is not null.
 			currentMapper.addComposite(propertyAuditingData.getPropertyData(),
 					new SortedMapCollectionMapper(commonCollectionMapperData,
-							TreeMap.class, SortedMapProxy.class, elementComponentData, indexComponentData, propertyValue.getComparator()));
+							TreeMap.class, SortedMapProxy.class, elementComponentData, indexComponentData, propertyValue.getComparator(), embeddableElementType));
         } else if (type instanceof MapType) {
             // Indexed collection, so <code>indexComponentData</code> is not null.
             currentMapper.addComposite(propertyAuditingData.getPropertyData(),
                     new MapCollectionMapper<Map>(commonCollectionMapperData,
-                    HashMap.class, MapProxy.class, elementComponentData, indexComponentData));
+                    HashMap.class, MapProxy.class, elementComponentData, indexComponentData, embeddableElementType));
         } else if (type instanceof BagType) {
             currentMapper.addComposite(propertyAuditingData.getPropertyData(),
                     new BasicCollectionMapper<List>(commonCollectionMapperData,
-                    ArrayList.class, ListProxy.class, elementComponentData));
+                    ArrayList.class, ListProxy.class, elementComponentData, embeddableElementType, embeddableElementType));
         } else if (type instanceof ListType) {
             // Indexed collection, so <code>indexComponentData</code> is not null.
             currentMapper.addComposite(propertyAuditingData.getPropertyData(),
                     new ListCollectionMapper(commonCollectionMapperData,
-                    elementComponentData, indexComponentData));
+                    elementComponentData, indexComponentData, embeddableElementType));
         } else {
             mainGenerator.throwUnsupportedTypeException(type, referencingEntityName, propertyName);
         }
@@ -543,7 +591,7 @@ public final class CollectionMetadataGenerator {
         mainGenerator.addRevisionInfoRelation(middleEntityXmlId);
 
         // Adding the revision type property to the entity xml.
-        mainGenerator.addRevisionType(middleEntityXml);
+        mainGenerator.addRevisionType((isEmbeddableElementType() ? middleEntityXmlId : middleEntityXml), middleEntityXml);
 
         // All other properties should also be part of the primary key of the middle entity.
         return middleEntityXmlId;
@@ -644,4 +692,11 @@ public final class CollectionMetadataGenerator {
         return null;
     }
 
+    
+    /**
+     * Checks if the collection element type is a {@link ComponentType}.
+     */
+    private boolean isEmbeddableElementType() {
+      return (propertyValue.getElement().getType() instanceof ComponentType);
+    }
 }

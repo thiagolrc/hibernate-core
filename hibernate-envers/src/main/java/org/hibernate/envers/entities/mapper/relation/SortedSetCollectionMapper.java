@@ -39,8 +39,9 @@ public final class SortedSetCollectionMapper extends BasicCollectionMapper<Sorte
 
 	public SortedSetCollectionMapper(CommonCollectionMapperData commonCollectionMapperData,
 									 Class<? extends SortedSet> collectionClass, Class<? extends SortedSet> proxyClass,
-									 MiddleComponentData elementComponentData, Comparator comparator) {
-		super(commonCollectionMapperData, collectionClass, proxyClass, elementComponentData);
+									 MiddleComponentData elementComponentData, boolean ordinalInId, boolean revisionTypeInId,
+									 Comparator comparator) {
+		super(commonCollectionMapperData, collectionClass, proxyClass, elementComponentData, ordinalInId, revisionTypeInId);
 		this.comparator = comparator;
 	}
 

@@ -12,6 +12,7 @@ import org.hibernate.envers.configuration.AuditEntitiesConfiguration;
 import org.hibernate.envers.configuration.GlobalConfiguration;
 import org.hibernate.envers.entities.mapper.PersistentCollectionChangeData;
 import org.hibernate.envers.entities.mapper.id.IdMapper;
+import org.hibernate.envers.entities.mapper.relation.CollectionPropertyMapper;
 import org.hibernate.envers.entities.mapper.relation.MiddleComponentData;
 import org.hibernate.envers.entities.mapper.relation.MiddleIdData;
 import org.hibernate.envers.synchronization.SessionCacheCleaner;
@@ -84,19 +85,37 @@ public class ValidityAuditStrategy implements AuditStrategy {
     }
 
     @SuppressWarnings({"unchecked"})
-    public void performCollectionChange(Session session, AuditConfiguration auditCfg,
+    public void performCollectionChange(Session session, String entityName, String propertyName, AuditConfiguration auditCfg,
                                         PersistentCollectionChangeData persistentCollectionChangeData, Object revision) {
 
         final QueryBuilder qb = new QueryBuilder(persistentCollectionChangeData.getEntityName(), "e");
 
         // Adding a parameter for each id component, except the rev number
         final String originalIdPropName = auditCfg.getAuditEntCfg().getOriginalIdPropName();
-        final Map<String, Object> originalId = (Map<String, Object>) persistentCollectionChangeData.getData().get(
+        final Map<String, Object> data = persistentCollectionChangeData.getData();
+        final Map<String, Object> originalId = (Map<String, Object>) data.get(
                 originalIdPropName);
+
+        
+        final CollectionPropertyMapper collectionPropertyMapper = (CollectionPropertyMapper) auditCfg.getEntCfg().get(entityName).getPropertyMapper().getMapper(propertyName);
+        final String revisionFieldName = auditCfg.getAuditEntCfg().getRevisionFieldName();
+        final String embeddableSetOrdinalPropertyName = auditCfg.getAuditEntCfg().getEmbeddableSetOrdinalPropertyName();
+        final String revisionTypePropName = auditCfg.getAuditEntCfg().getRevisionTypePropName();
+        
         for (Map.Entry<String, Object> originalIdEntry : originalId.entrySet()) {
-            if (!auditCfg.getAuditEntCfg().getRevisionFieldName().equals(originalIdEntry.getKey())) {
+            if (!revisionFieldName.equals(originalIdEntry.getKey()) && !embeddableSetOrdinalPropertyName.equals(originalIdEntry.getKey()) && !revisionTypePropName.equals(originalIdEntry.getKey())) {
                 qb.getRootParameters().addWhereWithParam(originalIdPropName + "." + originalIdEntry.getKey(),
                         true, "=", originalIdEntry.getValue());
+            }
+        }
+        
+        if(collectionPropertyMapper != null && collectionPropertyMapper.needsDataComparision())
+        {
+            for (Map.Entry<String, Object> dataEntry : data.entrySet()) {
+                if(!originalIdPropName.equals(dataEntry.getKey())) {
+                    qb.getRootParameters().addWhereWithParam(dataEntry.getKey(),
+                            true, "=", dataEntry.getValue());
+                }
             }
         }
 
@@ -112,7 +131,7 @@ public class ValidityAuditStrategy implements AuditStrategy {
         }
 
         // Save the audit data
-        session.save(persistentCollectionChangeData.getEntityName(), persistentCollectionChangeData.getData());
+        session.save(persistentCollectionChangeData.getEntityName(), data);
         sessionCacheCleaner.scheduleAuditDataRemoval(session, persistentCollectionChangeData.getData());
     }
 
@@ -132,7 +151,7 @@ public class ValidityAuditStrategy implements AuditStrategy {
 	public void addAssociationAtRevisionRestriction(QueryBuilder rootQueryBuilder,  String revisionProperty, 
 		    String revisionEndProperty, boolean addAlias, MiddleIdData referencingIdData, 
 		    String versionsMiddleEntityName, String eeOriginalIdPropertyPath, String revisionPropertyPath,
-		    String originalIdPropertyName, MiddleComponentData... componentDatas) {
+		    String originalIdPropertyName, String alias1, MiddleComponentData... componentDatas) {
 		Parameters rootParameters = rootQueryBuilder.getRootParameters();
 		addRevisionRestriction(rootParameters, revisionProperty, revisionEndProperty, addAlias);
 	}
@@ -192,4 +211,3 @@ public class ValidityAuditStrategy implements AuditStrategy {
         }
     }
 }
-
