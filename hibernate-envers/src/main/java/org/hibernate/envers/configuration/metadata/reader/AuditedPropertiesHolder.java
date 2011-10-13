@@ -30,4 +30,8 @@ public interface AuditedPropertiesHolder {
 	 */
 	boolean contains(String propertyName);
 	
+	/**
+	 * @return an {@link Iterable} for the property names.
+	 */
+	Iterable<String> getPropertyNames();
 }

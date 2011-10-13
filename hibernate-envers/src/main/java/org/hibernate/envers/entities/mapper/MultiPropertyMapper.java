@@ -26,18 +26,16 @@ package org.hibernate.envers.entities.mapper;
 import java.io.Serializable;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-
-import org.hibernate.envers.entities.PropertyData;
-import org.hibernate.envers.configuration.AuditConfiguration;
-import org.hibernate.envers.reader.AuditReaderImplementor;
-import org.hibernate.envers.tools.reflection.ReflectionTools;
-import org.hibernate.envers.tools.Tools;
-import org.hibernate.envers.tools.MappingTools;
 
 import org.hibernate.collection.PersistentCollection;
-import org.hibernate.property.Getter;
 import org.hibernate.engine.SessionImplementor;
+import org.hibernate.envers.configuration.AuditConfiguration;
+import org.hibernate.envers.entities.PropertyData;
+import org.hibernate.envers.reader.AuditReaderImplementor;
+import org.hibernate.envers.tools.MappingTools;
+import org.hibernate.envers.tools.Tools;
+import org.hibernate.envers.tools.reflection.ReflectionTools;
+import org.hibernate.property.Getter;
 
 /**
  * @author Adam Warski (adam at warski dot org)
@@ -83,7 +81,7 @@ public class MultiPropertyMapper implements ExtendedPropertyMapper {
             String propertyName = propertyNames[i];
 
             if (propertyDatas.containsKey(propertyName)) {
-                ret |= properties.get(propertyDatas.get(propertyName)).mapToMapFromEntity(session, data,
+                ret |= getMapper(propertyName).mapToMapFromEntity(session, data,
                         getAtIndexOrNull(newState, i),
                         getAtIndexOrNull(oldState, i));
             }
@@ -119,7 +117,8 @@ public class MultiPropertyMapper implements ExtendedPropertyMapper {
         }
     }
 
-    public List<PersistentCollectionChangeData> mapCollectionChanges(String referencingPropertyName,
+    public List<PersistentCollectionChangeData> mapCollectionChanges(SessionImplementor session, 
+                                                                                    String referencingPropertyName,
                                                                                     PersistentCollection newColl,
                                                                                     Serializable oldColl,
                                                                                     Serializable id) {
@@ -144,9 +143,9 @@ public class MultiPropertyMapper implements ExtendedPropertyMapper {
 			delegatePropertyName = referencingPropertyName;
 		}
 
-        PropertyMapper mapper = properties.get(propertyDatas.get(referencingPropertyName));
+        PropertyMapper mapper = getMapper(referencingPropertyName);
         if (mapper != null) {
-            return mapper.mapCollectionChanges(delegatePropertyName, newColl, oldColl, id);
+            return mapper.mapCollectionChanges(session, delegatePropertyName, newColl, oldColl, id);
         } else {
             return null;
         }
@@ -155,4 +154,8 @@ public class MultiPropertyMapper implements ExtendedPropertyMapper {
 	public Map<PropertyData, PropertyMapper> getProperties() {
 		return properties;
 	}
+
+    public PropertyMapper getMapper(String propertyName) {
+        return properties.get(propertyDatas.get(propertyName));
+    }
 }

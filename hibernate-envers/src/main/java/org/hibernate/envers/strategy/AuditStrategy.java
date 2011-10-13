@@ -3,6 +3,7 @@ package org.hibernate.envers.strategy;
 import java.io.Serializable;
 
 import org.hibernate.Session;
+import org.hibernate.collection.PersistentCollection;
 import org.hibernate.envers.configuration.AuditConfiguration;
 import org.hibernate.envers.configuration.GlobalConfiguration;
 import org.hibernate.envers.entities.mapper.PersistentCollectionChangeData;
@@ -34,11 +35,13 @@ public interface AuditStrategy {
      * Perform the persistence of audited data for collection ("middle") entities.
      *
      * @param session Session, which can be used to persist the data.
+     * @param entityName Name of the entity, in which the audited change happens
+     * @param propertyName The name of the property holding the {@link PersistentCollection}.
      * @param auditCfg Audit configuration
      * @param persistentCollectionChangeData Collection change data to be persisted.
      * @param revision Current revision data
      */
-    void performCollectionChange(Session session, AuditConfiguration auditCfg,
+    void performCollectionChange(Session session, String entityName, String propertyName, AuditConfiguration auditCfg,
                                  PersistentCollectionChangeData persistentCollectionChangeData, Object revision);
     
 
@@ -69,32 +72,33 @@ public interface AuditStrategy {
 			String revisionProperty, String revisionEndProperty, boolean addAlias, MiddleIdData idData, 
 			String revisionPropertyPath, String originalIdPropertyName, String alias1, String alias2);
 
-	/**
-	 * Update the rootQueryBuilder with an extra WHERE clause to restrict the revision for a middle-entity 
-	 * association. This WHERE clause depends on the AuditStrategy, as follows:
-	 * <ul>
-	 * <li>For {@link DefaultAuditStrategy} a subquery is created: 
-	 * <p><code>e.revision = (SELECT max(...) ...)</code></p>
-	 * </li>
-	 * <li>for {@link ValidityAuditStrategy} the revision-end column is used: 
-	 * <p><code>e.revision <= :revision and (e.endRevision > :revision or e.endRevision is null)</code></p>
-	 * </li>
-	 * </ul>
-	 * 
-	 * @param rootQueryBuilder the {@link QueryBuilder} that will be updated
+    /**
+     * Update the rootQueryBuilder with an extra WHERE clause to restrict the revision for a middle-entity 
+     * association. This WHERE clause depends on the AuditStrategy, as follows:
+     * <ul>
+     * <li>For {@link DefaultAuditStrategy} a subquery is created: 
+     * <p><code>e.revision = (SELECT max(...) ...)</code></p>
+     * </li>
+     * <li>for {@link ValidityAuditStrategy} the revision-end column is used: 
+     * <p><code>e.revision <= :revision and (e.endRevision > :revision or e.endRevision is null)</code></p>
+     * </li>
+     * </ul>
+     * 
+     * @param rootQueryBuilder the {@link QueryBuilder} that will be updated
      * @param revisionProperty property of the revision column
      * @param revisionEndProperty property of the revisionEnd column (only used for {@link ValidityAuditStrategy})
      * @param addAlias {@code boolean} indicator if a left alias is needed
      * @param referencingIdData id-information for the middle-entity association (only used for {@link DefaultAuditStrategy})
-	 * @param versionsMiddleEntityName name of the middle-entity
-	 * @param eeOriginalIdPropertyPath name of the id property (only used for {@link ValidityAuditStrategy})
-	 * @param revisionPropertyPath path of the revision property (only used for {@link ValidityAuditStrategy})
-	 * @param originalIdPropertyName name of the id property (only used for {@link ValidityAuditStrategy})
-	 * @param componentDatas information about the middle-entity relation
-	 */
-	void addAssociationAtRevisionRestriction(QueryBuilder rootQueryBuilder,  String revisionProperty, 
-			String revisionEndProperty, boolean addAlias, MiddleIdData referencingIdData, 
-			String versionsMiddleEntityName, String eeOriginalIdPropertyPath, String revisionPropertyPath,
-          String originalIdPropertyName, MiddleComponentData... componentDatas);
+     * @param versionsMiddleEntityName name of the middle-entity
+     * @param eeOriginalIdPropertyPath name of the id property (only used for {@link ValidityAuditStrategy})
+     * @param revisionPropertyPath path of the revision property (only used for {@link ValidityAuditStrategy})
+     * @param originalIdPropertyName name of the id property (only used for {@link ValidityAuditStrategy})
+     * @param alias1 an alias used for subqueries.
+     * @param componentDatas information about the middle-entity relation
+     */
+    void addAssociationAtRevisionRestriction(QueryBuilder rootQueryBuilder,  String revisionProperty, 
+            String revisionEndProperty, boolean addAlias, MiddleIdData referencingIdData, 
+            String versionsMiddleEntityName, String eeOriginalIdPropertyPath, String revisionPropertyPath,
+          String originalIdPropertyName, String alias1, MiddleComponentData... componentDatas);
 
 }

@@ -34,30 +34,32 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.hibernate.collection.PersistentCollection;
+import org.hibernate.engine.SessionImplementor;
 import org.hibernate.envers.RevisionType;
 import org.hibernate.envers.configuration.AuditConfiguration;
 import org.hibernate.envers.entities.mapper.PersistentCollectionChangeData;
-import org.hibernate.envers.entities.mapper.PropertyMapper;
 import org.hibernate.envers.entities.mapper.relation.lazy.initializor.Initializor;
 import org.hibernate.envers.exception.AuditException;
 import org.hibernate.envers.reader.AuditReaderImplementor;
 import org.hibernate.envers.tools.reflection.ReflectionTools;
-
-import org.hibernate.collection.PersistentCollection;
 import org.hibernate.property.Setter;
-import org.hibernate.engine.SessionImplementor;
 
 /**
  * @author Adam Warski (adam at warski dot org)
  */
-public abstract class AbstractCollectionMapper<T> implements PropertyMapper {
+public abstract class AbstractCollectionMapper<T> implements CollectionPropertyMapper {
     protected final CommonCollectionMapperData commonCollectionMapperData;    
     protected final Class<? extends T> collectionClass;
 
     private final Constructor<? extends T> proxyConstructor;
+    
+    protected final boolean ordinalInId;
+    protected final boolean revisionTypeInId;
 
     protected AbstractCollectionMapper(CommonCollectionMapperData commonCollectionMapperData,
-                                       Class<? extends T> collectionClass, Class<? extends T> proxyClass) {
+                                       Class<? extends T> collectionClass, Class<? extends T> proxyClass,
+                                       boolean ordinalInId, boolean revisionTypeInId) {
         this.commonCollectionMapperData = commonCollectionMapperData;
         this.collectionClass = collectionClass;
 
@@ -66,6 +68,9 @@ public abstract class AbstractCollectionMapper<T> implements PropertyMapper {
         } catch (NoSuchMethodException e) {
             throw new AuditException(e);
         }
+        
+        this.ordinalInId = ordinalInId;
+        this.revisionTypeInId = revisionTypeInId;
     }
 
     protected abstract Collection getNewCollectionContent(PersistentCollection newCollection);
@@ -73,16 +78,44 @@ public abstract class AbstractCollectionMapper<T> implements PropertyMapper {
 
     /**
      * Maps the changed collection element to the given map.
+     * @param session The SessionImplementor reference.
+     * @param idData Map to which composite-id data should be added.
      * @param data Where to map the data.
      * @param changed The changed collection element to map.
      */
-    protected abstract void mapToMapFromObject(Map<String, Object> data, Object changed);
+    protected abstract void mapToMapFromObject(SessionImplementor session, Map<String, Object> idData,
+                                               Map<String, Object> data, Object changed);
 
-    private void addCollectionChanges(List<PersistentCollectionChangeData> collectionChanges, Set<Object> changed,
+    /**
+     * Creates a new empty Map. 
+     * 
+     * <p>
+     * The ordinal parameter represents the iteration ordinal of the current element,
+     * used to add a synthetic id when dealing with embeddables since embeddable fields
+     * can't be contained within the primary key since they might be nullable.
+     * </p>
+     * 
+     * @param ordinal The element iteration ordinal.
+     * 
+     * @return A Map for holding the ID information.
+     */
+    protected Map<String, Object> createIdMap(int ordinal) {
+      final HashMap<String, Object> idMap = new HashMap<String, Object>();
+      
+      if(ordinalInId) {
+          idMap.put(this.commonCollectionMapperData.getVerEntCfg().getEmbeddableSetOrdinalPropertyName(), Integer.valueOf(ordinal));
+      }
+      
+      return idMap;
+    }
+    
+    private void addCollectionChanges(SessionImplementor session, List<PersistentCollectionChangeData> collectionChanges, Set<Object> changed,
                                       RevisionType revisionType, Serializable id) {
+        int ordinal = 0;
+        
         for (Object changedObj : changed) {
             Map<String, Object> entityData = new HashMap<String, Object>();
-            Map<String, Object> originalId = new HashMap<String, Object>();
+            Map<String, Object> originalId = createIdMap(ordinal++);
             entityData.put(commonCollectionMapperData.getVerEntCfg().getOriginalIdPropName(), originalId);
 
             collectionChanges.add(new PersistentCollectionChangeData(
@@ -91,14 +124,15 @@ public abstract class AbstractCollectionMapper<T> implements PropertyMapper {
             commonCollectionMapperData.getReferencingIdData().getPrefixedMapper().mapToMapFromId(originalId, id);
 
             // Mapping collection element and index (if present).
-            mapToMapFromObject(originalId, changedObj);
+            mapToMapFromObject(session, originalId, entityData, changedObj);
 
-            entityData.put(commonCollectionMapperData.getVerEntCfg().getRevisionTypePropName(), revisionType);
+            (revisionTypeInId ? originalId : entityData).put(commonCollectionMapperData.getVerEntCfg().getRevisionTypePropName(), revisionType);
         }
     }
 
     @SuppressWarnings({"unchecked"})
-    public List<PersistentCollectionChangeData> mapCollectionChanges(String referencingPropertyName,
+    public List<PersistentCollectionChangeData> mapCollectionChanges(SessionImplementor session, 
+                                                                     String referencingPropertyName,
                                                                      PersistentCollection newColl,
                                                                      Serializable oldColl, Serializable id) {
         if (!commonCollectionMapperData.getCollectionReferencingPropertyData().getName()
@@ -118,14 +152,14 @@ public abstract class AbstractCollectionMapper<T> implements PropertyMapper {
 		// removeAll in AbstractSet has an implementation that is hashcode-change sensitive (as opposed to addAll).
         if (oldColl != null) { added.removeAll(new HashSet(oldCollection)); }
 
-        addCollectionChanges(collectionChanges, added, RevisionType.ADD, id);
+        addCollectionChanges(session, collectionChanges, added, RevisionType.ADD, id);
 
         Set<Object> deleted = new HashSet<Object>();
         if (oldColl != null) { deleted.addAll(oldCollection); }
 		// The same as above - re-hashing new collection.
         if (newColl != null) { deleted.removeAll(new HashSet(newCollection)); }
 
-        addCollectionChanges(collectionChanges, deleted, RevisionType.DEL, id);
+        addCollectionChanges(session, collectionChanges, deleted, RevisionType.DEL, id);
 
         return collectionChanges;
     }

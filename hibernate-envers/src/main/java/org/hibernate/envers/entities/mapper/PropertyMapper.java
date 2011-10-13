@@ -27,11 +27,10 @@ import java.io.Serializable;
 import java.util.List;
 import java.util.Map;
 
-import org.hibernate.envers.configuration.AuditConfiguration;
-import org.hibernate.envers.reader.AuditReaderImplementor;
-
 import org.hibernate.collection.PersistentCollection;
 import org.hibernate.engine.SessionImplementor;
+import org.hibernate.envers.configuration.AuditConfiguration;
+import org.hibernate.envers.reader.AuditReaderImplementor;
 
 /**
  * @author Adam Warski (adam at warski dot org)
@@ -61,13 +60,14 @@ public interface PropertyMapper {
 
     /**
      * Maps collection changes
+     * @param session The current session.
      * @param referencingPropertyName Name of the field, which holds the collection in the entity.
      * @param newColl New collection, after updates.
      * @param oldColl Old collection, before updates.
      * @param id Id of the object owning the collection.
      * @return List of changes that need to be performed on the persistent store.
      */
-    List<PersistentCollectionChangeData> mapCollectionChanges(String referencingPropertyName,
+    List<PersistentCollectionChangeData> mapCollectionChanges(SessionImplementor session, String referencingPropertyName,
                                                               PersistentCollection newColl,
                                                               Serializable oldColl, Serializable id);
 }

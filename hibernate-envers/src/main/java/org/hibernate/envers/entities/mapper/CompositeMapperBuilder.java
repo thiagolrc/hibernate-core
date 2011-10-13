@@ -23,6 +23,8 @@
  */
 package org.hibernate.envers.entities.mapper;
 
+import java.util.Map;
+
 import org.hibernate.envers.entities.PropertyData;
 
 /**
@@ -31,4 +33,5 @@ import org.hibernate.envers.entities.PropertyData;
 public interface CompositeMapperBuilder extends SimpleMapperBuilder {    
     public CompositeMapperBuilder addComponent(PropertyData propertyData, String componentClassName);
     public void addComposite(PropertyData propertyData, PropertyMapper propertyMapper);
+    public Map<PropertyData, PropertyMapper> getProperties();
 }

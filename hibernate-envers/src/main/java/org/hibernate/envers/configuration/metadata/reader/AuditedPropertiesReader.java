@@ -118,7 +118,7 @@ public class AuditedPropertiesReader {
 		boolean isAudited = fillPropertyData(property, componentData, accessType,
 				allClassAudited);
 
-		PersistentPropertiesSource componentPropertiesSource = new ComponentPropertiesSource(
+		PersistentPropertiesSource componentPropertiesSource = new ComponentPropertiesSource(reflectionManager,
 				(Component) propertyValue);
 		
 		ComponentAuditedPropertiesReader audPropReader = new ComponentAuditedPropertiesReader(
@@ -291,11 +291,11 @@ public class AuditedPropertiesReader {
 		public Class<? extends Annotation> annotationType() { return this.getClass(); }
 	};
 
-    private class ComponentPropertiesSource implements PersistentPropertiesSource {
+    public static class ComponentPropertiesSource implements PersistentPropertiesSource {
 		private final XClass xclass;
 		private final Component component;
 
-		private ComponentPropertiesSource(Component component) {
+		public ComponentPropertiesSource(ReflectionManager reflectionManager, Component component) {
 			try {
 				this.xclass = reflectionManager.classForName(component.getComponentClassName(), this.getClass());
 			} catch (ClassNotFoundException e) {

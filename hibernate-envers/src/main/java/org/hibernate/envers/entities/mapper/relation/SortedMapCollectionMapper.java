@@ -23,13 +23,13 @@
  */
 package org.hibernate.envers.entities.mapper.relation;
 
+import java.util.Comparator;
+import java.util.SortedMap;
+
 import org.hibernate.envers.configuration.AuditConfiguration;
 import org.hibernate.envers.entities.mapper.relation.lazy.initializor.Initializor;
 import org.hibernate.envers.entities.mapper.relation.lazy.initializor.SortedMapCollectionInitializor;
 import org.hibernate.envers.reader.AuditReaderImplementor;
-
-import java.util.Comparator;
-import java.util.SortedMap;
 
 /**
  * @author Michal Skowronek (mskowr at o2 dot pl)
@@ -39,8 +39,9 @@ public final class SortedMapCollectionMapper extends MapCollectionMapper<SortedM
 
 	public SortedMapCollectionMapper(CommonCollectionMapperData commonCollectionMapperData,
 									 Class<? extends SortedMap> collectionClass, Class<? extends SortedMap> proxyClass,
-									 MiddleComponentData elementComponentData, MiddleComponentData indexComponentData, Comparator comparator) {
-		super(commonCollectionMapperData, collectionClass, proxyClass, elementComponentData, indexComponentData);
+									 MiddleComponentData elementComponentData, MiddleComponentData indexComponentData, Comparator comparator,
+									 boolean revisionTypeInId) {
+		super(commonCollectionMapperData, collectionClass, proxyClass, elementComponentData, indexComponentData, revisionTypeInId);
 		this.comparator = comparator;
 	}
 

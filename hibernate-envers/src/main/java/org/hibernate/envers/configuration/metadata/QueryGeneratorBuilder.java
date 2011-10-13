@@ -50,15 +50,18 @@ public final class QueryGeneratorBuilder {
     private final MiddleIdData referencingIdData;
     private final String auditMiddleEntityName;
     private final List<MiddleIdData> idDatas;
+    private final boolean revisionTypeInId;
 
     QueryGeneratorBuilder(GlobalConfiguration globalCfg, AuditEntitiesConfiguration verEntCfg,
                           AuditStrategy auditStrategy,
-                          MiddleIdData referencingIdData, String auditMiddleEntityName) {
+                          MiddleIdData referencingIdData, String auditMiddleEntityName,
+                          final boolean revisionTypeInId) {
         this.globalCfg = globalCfg;
         this.verEntCfg = verEntCfg;
         this.auditStrategy = auditStrategy;
         this.referencingIdData = referencingIdData;
         this.auditMiddleEntityName = auditMiddleEntityName;
+        this.revisionTypeInId = revisionTypeInId;
 
         idDatas = new ArrayList<MiddleIdData>();
     }
@@ -70,14 +73,14 @@ public final class QueryGeneratorBuilder {
     RelationQueryGenerator build(MiddleComponentData... componentDatas) {
         if (idDatas.size() == 0) {
             return new OneEntityQueryGenerator(verEntCfg, auditStrategy, auditMiddleEntityName, referencingIdData,
-                    componentDatas);
+                    revisionTypeInId, componentDatas);
         } else if (idDatas.size() == 1) {
             if (idDatas.get(0).isAudited()) {
                 return new TwoEntityQueryGenerator(globalCfg, verEntCfg, auditStrategy, auditMiddleEntityName, referencingIdData,
-                        idDatas.get(0), componentDatas);
+                        idDatas.get(0), revisionTypeInId, componentDatas);
             } else {
                 return new TwoEntityOneAuditedQueryGenerator(verEntCfg, auditStrategy, auditMiddleEntityName, referencingIdData,
-                        idDatas.get(0), componentDatas);
+                        idDatas.get(0), revisionTypeInId, componentDatas);
             }
         } else if (idDatas.size() == 2) {
             // All entities must be audited.
@@ -86,7 +89,7 @@ public final class QueryGeneratorBuilder {
             }
 
             return new ThreeEntityQueryGenerator(globalCfg, verEntCfg, auditStrategy, auditMiddleEntityName, referencingIdData,
-                    idDatas.get(0), idDatas.get(1), componentDatas);
+                    idDatas.get(0), idDatas.get(1), revisionTypeInId, componentDatas);
         } else {
             throw new IllegalStateException("Illegal number of related entities.");
         }

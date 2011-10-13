@@ -27,13 +27,13 @@ import java.io.Serializable;
 import java.util.Collection;
 import java.util.Map;
 
+import org.hibernate.collection.PersistentCollection;
+import org.hibernate.engine.SessionImplementor;
 import org.hibernate.envers.configuration.AuditConfiguration;
 import org.hibernate.envers.entities.mapper.PropertyMapper;
 import org.hibernate.envers.entities.mapper.relation.lazy.initializor.BasicCollectionInitializor;
 import org.hibernate.envers.entities.mapper.relation.lazy.initializor.Initializor;
 import org.hibernate.envers.reader.AuditReaderImplementor;
-
-import org.hibernate.collection.PersistentCollection;
 
 /**
  * @author Adam Warski (adam at warski dot org)
@@ -43,8 +43,9 @@ public class BasicCollectionMapper<T extends Collection> extends AbstractCollect
 
     public BasicCollectionMapper(CommonCollectionMapperData commonCollectionMapperData,
                                  Class<? extends T> collectionClass, Class<? extends T> proxyClass,
-                                 MiddleComponentData elementComponentData) {
-        super(commonCollectionMapperData, collectionClass, proxyClass);
+                                 MiddleComponentData elementComponentData,
+                                 boolean ordinalInId, boolean revisionTypeInId) {
+        super(commonCollectionMapperData, collectionClass, proxyClass, ordinalInId, revisionTypeInId);
         this.elementComponentData = elementComponentData;
     }
 
@@ -68,7 +69,11 @@ public class BasicCollectionMapper<T extends Collection> extends AbstractCollect
         }
     }
 
-    protected void mapToMapFromObject(Map<String, Object> data, Object changed) {
-        elementComponentData.getComponentMapper().mapToMapFromObject(data, changed);
+    protected void mapToMapFromObject(SessionImplementor session, Map<String, Object> idData, Map<String, Object> data, Object changed) {
+        elementComponentData.getComponentMapper().mapToMapFromObject(session, idData, data, changed);
+    }
+
+    public boolean needsDataComparision() {
+        return elementComponentData.getComponentMapper().needsDataComparision();
     }
 }

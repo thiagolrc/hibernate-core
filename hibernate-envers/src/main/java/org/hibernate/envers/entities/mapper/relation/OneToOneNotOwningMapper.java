@@ -36,6 +36,7 @@ import org.hibernate.envers.entities.PropertyData;
 import org.hibernate.envers.exception.AuditException;
 import org.hibernate.envers.query.AuditEntity;
 import org.hibernate.envers.reader.AuditReaderImplementor;
+import org.hibernate.envers.tools.query.QueryBuilder;
 import org.hibernate.envers.tools.reflection.ReflectionTools;
 
 import org.hibernate.NonUniqueResultException;
@@ -92,7 +93,8 @@ public class OneToOneNotOwningMapper implements PropertyMapper {
         setter.set(obj, value, null);
     }
 
-    public List<PersistentCollectionChangeData> mapCollectionChanges(String referencingPropertyName,
+    public List<PersistentCollectionChangeData> mapCollectionChanges(SessionImplementor session, 
+                                                                                    String referencingPropertyName,
                                                                                     PersistentCollection newColl,
                                                                                     Serializable oldColl,
                                                                                     Serializable id) {

@@ -23,10 +23,11 @@
  */
 package org.hibernate.envers.entities.mapper.relation.component;
 
+import java.util.Map;
+
+import org.hibernate.engine.SessionImplementor;
 import org.hibernate.envers.entities.EntityInstantiator;
 import org.hibernate.envers.tools.query.Parameters;
-
-import java.util.Map;
 
 /**
  * A mapper for reading and writing a property straight to/from maps. This mapper cannot be used with middle tables,
@@ -46,11 +47,15 @@ public final class MiddleStraightComponentMapper implements MiddleComponentMappe
         return data.get(propertyName);
     }
 
-    public void mapToMapFromObject(Map<String, Object> data, Object obj) {
-        data.put(propertyName, obj);
+    public void mapToMapFromObject(SessionImplementor session, Map<String, Object> idData, Map<String, Object> data, Object obj) {
+        idData.put(propertyName, obj);
     }
 
-    public void addMiddleEqualToQuery(Parameters parameters, String prefix1, String prefix2) {
+    public void addMiddleEqualToQuery(Parameters parameters, String idPrefix1, String prefix1, String idPrefix2, String prefix2) {
         throw new UnsupportedOperationException("Cannot use this mapper with a middle table!");
+    }
+    
+    public boolean needsDataComparision() {
+        return false;
     }
 }

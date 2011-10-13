@@ -28,6 +28,8 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
+import org.hibernate.collection.PersistentCollection;
+import org.hibernate.engine.SessionImplementor;
 import org.hibernate.envers.configuration.AuditConfiguration;
 import org.hibernate.envers.entities.mapper.PropertyMapper;
 import org.hibernate.envers.entities.mapper.relation.lazy.initializor.Initializor;
@@ -37,8 +39,6 @@ import org.hibernate.envers.reader.AuditReaderImplementor;
 import org.hibernate.envers.tools.Pair;
 import org.hibernate.envers.tools.Tools;
 
-import org.hibernate.collection.PersistentCollection;
-
 /**
  * @author Adam Warski (adam at warski dot org)
  */
@@ -47,8 +47,9 @@ public final class ListCollectionMapper extends AbstractCollectionMapper<List> i
     private final MiddleComponentData indexComponentData;
 
     public ListCollectionMapper(CommonCollectionMapperData commonCollectionMapperData,
-                                MiddleComponentData elementComponentData, MiddleComponentData indexComponentData) {
-        super(commonCollectionMapperData, List.class, ListProxy.class);
+                                MiddleComponentData elementComponentData, MiddleComponentData indexComponentData,
+                                boolean revisionTypeInId) {
+        super(commonCollectionMapperData, List.class, ListProxy.class, false, revisionTypeInId);
         this.elementComponentData = elementComponentData;
         this.indexComponentData = indexComponentData;
     }
@@ -78,9 +79,13 @@ public final class ListCollectionMapper extends AbstractCollectionMapper<List> i
     }
 
     @SuppressWarnings({"unchecked"})
-    protected void mapToMapFromObject(Map<String, Object> data, Object changed) {
+    protected void mapToMapFromObject(SessionImplementor session, Map<String, Object> idData, Map<String, Object> data, Object changed) {
         Pair<Integer, Object> indexValuePair = (Pair<Integer, Object>) changed;
-        elementComponentData.getComponentMapper().mapToMapFromObject(data, indexValuePair.getSecond());
-        indexComponentData.getComponentMapper().mapToMapFromObject(data, indexValuePair.getFirst());
+        elementComponentData.getComponentMapper().mapToMapFromObject(session, idData, data, indexValuePair.getSecond());
+        indexComponentData.getComponentMapper().mapToMapFromObject(session, idData, data, indexValuePair.getFirst());
+    }
+
+    public boolean needsDataComparision() {
+        return elementComponentData.getComponentMapper().needsDataComparision();
     }
 }

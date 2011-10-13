@@ -223,7 +223,7 @@ public class AuditEventListener implements PostInsertEventListener, PostUpdateEv
                                                              RelationDescription rd) {
         // First computing the relation changes
         List<PersistentCollectionChangeData> collectionChanges = verCfg.getEntCfg().get(collectionEntityName).getPropertyMapper()
-                .mapCollectionChanges(referencingPropertyName, newColl, oldColl, event.getAffectedOwnerIdOrNull());
+                .mapCollectionChanges(event.getSession(), referencingPropertyName, newColl, oldColl, event.getAffectedOwnerIdOrNull());
 
         // Getting the id mapper for the related entity, as the work units generated will corrspond to the related
         // entities.

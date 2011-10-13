@@ -23,13 +23,15 @@
  */
 package org.hibernate.envers.entities.mapper;
 
-import org.hibernate.engine.SessionImplementor;
-
 import java.util.Map;
+
+import org.hibernate.engine.SessionImplementor;
 
 /**
  * @author Adam Warski (adam at warski dot org)
  */
 public interface ExtendedPropertyMapper extends PropertyMapper, CompositeMapperBuilder {
     public boolean map(SessionImplementor session, Map<String, Object> data, String[] propertyNames, Object[] newState, Object[] oldState);
+    
+    public PropertyMapper getMapper(String propertyName);
 }
