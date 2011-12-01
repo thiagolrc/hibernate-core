@@ -21,36 +21,40 @@
  * 51 Franklin Street, Fifth Floor
  * Boston, MA  02110-1301  USA
  */
-package org.hibernate.envers.test.entities;
+package org.hibernate.envers.test.entities.collection;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.persistence.ElementCollection;
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
+import javax.persistence.OrderColumn;
 
+import org.hibernate.annotations.Fetch;
+import org.hibernate.annotations.FetchMode;
+import org.hibernate.annotations.LazyCollection;
+import org.hibernate.annotations.LazyCollectionOption;
 import org.hibernate.envers.Audited;
-
+import org.hibernate.envers.test.entities.components.relations.ManyToOneComponent;
 /**
- * @author Adam Warski (adam at warski dot org)
+ * EmbeddableList with components with a manyToOne relation (referencing some entity)
+ * @author T.Lourenconi
+ *
  */
 @Entity
-public class StrTestEntity {
+@Audited
+public class EmbeddableListEntity2 {
     @Id
     @GeneratedValue
     private Integer id;
+    
+    @ElementCollection
+    @OrderColumn
+    private List<ManyToOneComponent> componentList = new ArrayList<ManyToOneComponent>();
 
-    @Audited
-    private String str;
-
-    public StrTestEntity() {
-    }
-
-    public StrTestEntity(String str, Integer id) {
-        this.str = str;
-        this.id = id;
-    }
-
-    public StrTestEntity(String str) {
-        this.str = str;
+    public EmbeddableListEntity2() {
     }
 
     public Integer getId() {
@@ -61,34 +65,32 @@ public class StrTestEntity {
         this.id = id;
     }
 
-    public String getStr() {
-        return str;
+    public List<ManyToOneComponent> getComponentList()
+    {
+      return componentList;
     }
 
-    public void setStr(String str) {
-        this.str = str;
+    public void setComponentList(List<ManyToOneComponent> componentList)
+    {
+      this.componentList = componentList;
     }
-
+    
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (!(o instanceof StrTestEntity)) return false;
+        if (!(o instanceof EmbeddableListEntity2)) return false;
 
-        StrTestEntity that = (StrTestEntity) o;
+        EmbeddableListEntity2 that = (EmbeddableListEntity2) o;
 
-        if (id != null ? !id.equals(that.getId()) : that.getId() != null) return false;
-        if (str != null ? !str.equals(that.getStr()) : that.getStr() != null) return false;
+        if (id != null ? !id.equals(that.id) : that.id != null) return false;
 
         return true;
     }
 
     public int hashCode() {
-        int result;
-        result = (id != null ? id.hashCode() : 0);
-        result = 31 * result + (str != null ? str.hashCode() : 0);
-        return result;
+        return (id != null ? id.hashCode() : 0);
     }
 
     public String toString() {
-        return "STE(id = " + id + ", str = " + str + ")";
+        return "ECLE(id = " + id + ", componentList = " + componentList + ')';
     }
 }

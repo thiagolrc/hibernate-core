@@ -489,6 +489,12 @@ public final class CollectionMetadataGenerator {
                     mainGenerator.addValue(parent, component.getProperty(auditedPropertyName).getValue(), componentMapper, prefix, xmlMappingData, nestedAuditingData, true, true);
                 }
                 
+                //emulating the second pass so that the relations (manyToOne) can be mapped too
+                for(final String auditedPropertyName : auditData.getPropertyNames()) {
+                    final PropertyAuditingData nestedAuditingData = auditData.getPropertyAuditingData(auditedPropertyName);
+                    mainGenerator.addValue(parent, component.getProperty(auditedPropertyName).getValue(), componentMapper, referencingEntityName, xmlMappingData, nestedAuditingData, true, false);
+                }
+                
                 // Add an additional column holding a number to make each entry unique within the set,
                 // since embeddable properties can be null
                 if(propertyValue.getCollectionType() instanceof SetType) {

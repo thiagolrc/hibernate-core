@@ -23,18 +23,20 @@
  */
 package org.hibernate.envers.test.entities.components.relations;
 
-import org.hibernate.envers.test.entities.StrTestEntity;
-
-import javax.persistence.ManyToOne;
 import javax.persistence.Embeddable;
+import javax.persistence.ManyToOne;
+
+import org.hibernate.envers.Audited;
+import org.hibernate.envers.test.entities.StrTestEntity;
 
 /**
  * @author Adam Warski (adam at warski dot org)
  */
 @Embeddable
+@Audited
 public class ManyToOneComponent {
 	@ManyToOne
-    private StrTestEntity entity;
+	private StrTestEntity entity;
 
     private String data;
 
