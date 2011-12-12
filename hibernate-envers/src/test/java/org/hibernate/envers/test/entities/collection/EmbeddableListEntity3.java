@@ -26,6 +26,7 @@ package org.hibernate.envers.test.entities.collection;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.persistence.Column;
 import javax.persistence.ElementCollection;
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
@@ -38,7 +39,7 @@ import org.hibernate.envers.test.entities.components.Component4;
 
 /**
  * EmbeddableList with a collectionId
- * @author T.Lourenconi
+ * @author thiagolrc
  *
  */
 @Entity
@@ -49,7 +50,7 @@ public class EmbeddableListEntity3 {
     private Integer id;
 
     @ElementCollection
-    @CollectionId(type=@Type(type="string"),columns={@javax.persistence.Column(name="identifier")}, generator="identity")
+    @CollectionId(columns = @Column(name = "COL_ID"), type = @Type(type = "long"), generator = "sequence")
     private List<Component4> componentList = new ArrayList<Component4>();
 
     public EmbeddableListEntity3() {

@@ -109,7 +109,7 @@ public abstract class AbstractCollectionMapper<T> implements CollectionPropertyM
       return idMap;
     }
     
-    private void addCollectionChanges(SessionImplementor session, List<PersistentCollectionChangeData> collectionChanges, Set<Object> changed,
+    private void addCollectionChanges(SessionImplementor session, List<PersistentCollectionChangeData> collectionChanges, List<Object> changed,
                                       RevisionType revisionType, Serializable id) {
         int ordinal = 0;
         
@@ -146,18 +146,18 @@ public abstract class AbstractCollectionMapper<T> implements CollectionPropertyM
         Collection newCollection = getNewCollectionContent(newColl);
         Collection oldCollection = getOldCollectionContent(oldColl);
 
-        Set<Object> added = new HashSet<Object>();
+        List<Object> added = new ArrayList<Object>();
         if (newColl != null) { added.addAll(newCollection); }
 		// Re-hashing the old collection as the hash codes of the elements there may have changed, and the
 		// removeAll in AbstractSet has an implementation that is hashcode-change sensitive (as opposed to addAll).
-        if (oldColl != null) { added.removeAll(new HashSet(oldCollection)); }
+        if (oldColl != null) { added.removeAll(new ArrayList(oldCollection)); }
 
         addCollectionChanges(session, collectionChanges, added, RevisionType.ADD, id);
 
-        Set<Object> deleted = new HashSet<Object>();
+        List<Object> deleted = new ArrayList<Object>();
         if (oldColl != null) { deleted.addAll(oldCollection); }
 		// The same as above - re-hashing new collection.
-        if (newColl != null) { deleted.removeAll(new HashSet(newCollection)); }
+        if (newColl != null) { deleted.removeAll(new ArrayList(newCollection)); }
 
         addCollectionChanges(session, collectionChanges, deleted, RevisionType.DEL, id);
 

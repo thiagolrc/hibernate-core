@@ -53,6 +53,7 @@ import org.hibernate.envers.entities.mapper.SinglePropertyMapper;
 import org.hibernate.envers.entities.mapper.id.IdMapper;
 import org.hibernate.envers.entities.mapper.relation.BasicCollectionMapper;
 import org.hibernate.envers.entities.mapper.relation.CommonCollectionMapperData;
+import org.hibernate.envers.entities.mapper.relation.IdBagCollectionMapper;
 import org.hibernate.envers.entities.mapper.relation.ListCollectionMapper;
 import org.hibernate.envers.entities.mapper.relation.MapCollectionMapper;
 import org.hibernate.envers.entities.mapper.relation.MiddleComponentData;
@@ -79,6 +80,7 @@ import org.hibernate.envers.tools.StringTools;
 import org.hibernate.envers.tools.Tools;
 import org.hibernate.mapping.Collection;
 import org.hibernate.mapping.Component;
+import org.hibernate.mapping.IdentifierBag;
 import org.hibernate.mapping.IndexedCollection;
 import org.hibernate.mapping.OneToMany;
 import org.hibernate.mapping.PersistentClass;
@@ -88,6 +90,7 @@ import org.hibernate.mapping.Table;
 import org.hibernate.mapping.Value;
 import org.hibernate.type.BagType;
 import org.hibernate.type.ComponentType;
+import org.hibernate.type.IdentifierBagType;
 import org.hibernate.type.ListType;
 import org.hibernate.type.ManyToOneType;
 import org.hibernate.type.MapType;
@@ -508,6 +511,15 @@ public final class CollectionMetadataGenerator {
                                                                        auditedEmbeddableSetOrdinalPropertyType, true, true);
                   MetadataTools.addColumn(idProperty, auditedEmbeddableSetOrdinalPropertyName, null, 0, 0, null, null, null, false);
                 }
+                if (propertyValue.getCollectionType() instanceof IdentifierBagType){
+                	//IdBag has an identifier column, so we add the same column to the auditing tables
+                	IdentifierBag idBag = (IdentifierBag) propertyValue;
+                	SimpleValue idBagIdentifier = (SimpleValue) idBag.getIdentifier();
+                	String columnType = idBagIdentifier.getTypeName();
+                	String columnName = (String) idBagIdentifier.getIdentifierGeneratorProperties().get("target_column");
+                	final Element idProperty = MetadataTools.addProperty(xmlMapping,columnName,columnType,true,true);
+                	MetadataTools.addColumn(idProperty, columnName, null, 0, 0, null, null, null, false);
+                }
                 
                 return new MiddleComponentData(componentMapper, 0);
             } else {
@@ -560,6 +572,17 @@ public final class CollectionMetadataGenerator {
             currentMapper.addComposite(propertyAuditingData.getPropertyData(),
                     new ListCollectionMapper(commonCollectionMapperData,
                     elementComponentData, indexComponentData, embeddableElementType));
+            
+        }else if (type instanceof IdentifierBagType) {
+            final IdentifierBag idBag = (IdentifierBag) propertyValue;
+            final SimpleValue idBagIdentifier = (SimpleValue) idBag.getIdentifier();
+        	final String idColumnName = (String) idBagIdentifier.getIdentifierGeneratorProperties().get("target_column");
+        	
+        	currentMapper.addComposite(propertyAuditingData.getPropertyData(),
+        	new IdBagCollectionMapper(idColumnName, commonCollectionMapperData,
+                    ArrayList.class, ListProxy.class, elementComponentData, embeddableElementType, embeddableElementType));
+        	
+        	
         } else {
             mainGenerator.throwUnsupportedTypeException(type, referencingEntityName, propertyName);
         }

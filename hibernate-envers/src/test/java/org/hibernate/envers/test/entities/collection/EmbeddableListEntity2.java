@@ -32,15 +32,12 @@ import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
 import javax.persistence.OrderColumn;
 
-import org.hibernate.annotations.Fetch;
-import org.hibernate.annotations.FetchMode;
-import org.hibernate.annotations.LazyCollection;
-import org.hibernate.annotations.LazyCollectionOption;
 import org.hibernate.envers.Audited;
 import org.hibernate.envers.test.entities.components.relations.ManyToOneComponent;
+
 /**
  * EmbeddableList with components with a manyToOne relation (referencing some entity)
- * @author T.Lourenconi
+ * @author thiagolrc
  *
  */
 @Entity
